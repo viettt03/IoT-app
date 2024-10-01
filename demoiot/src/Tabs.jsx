@@ -1,19 +1,16 @@
 import { View, Text, Image } from 'react-native'
-import React from 'react'
+import React, { useState } from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from './Screens/HomeScreen';
-import Table2 from './Screens/Table2';
+import ControlHistory from './Screens/ControlHistory';
 import ProfileScreens from './Screens/ProfileScreens';
-import Table from './Screens/Table';
-import DateTimePickerExample from './Screens/DateTimePickerExample ';
-import Example from './Screens/DateTimePickerExample ';
+import SensorHistory from './Screens/SensorHistory';
 
-
-type Props = {}
 
 const Tab = createBottomTabNavigator();
 
-const Tabs = (props: Props) => {
+const Tabs = (props) => {
+    const [refresh, setRefresh] = useState(false);
     return (
         <Tab.Navigator
             initialRouteName="Home"
@@ -37,8 +34,8 @@ const Tabs = (props: Props) => {
                 })}
             />
             <Tab.Screen
-                name="Table1"
-                component={Table}
+                name="SensorHistory1"
+                component={SensorHistory}
                 options={({ route }) => ({
                     tabBarIcon: ({ focused }) => (
                         <View>
@@ -54,9 +51,9 @@ const Tabs = (props: Props) => {
                 })}
             />
             <Tab.Screen
-                name="Table2"
-                component={Table2}
-                options={({ route }) => ({
+                name="ControlHistory"
+                component={ControlHistory}
+                options={({ navigation, route }) => ({
 
                     tabBarIcon: ({ focused }) => (
                         <View>
@@ -69,6 +66,11 @@ const Tabs = (props: Props) => {
                             />
                         </View>
                     ),
+                    tabPress: (e) => {
+                        e.preventDefault(); // Ngăn chặn hành động mặc định
+                        setRefresh(prev => !prev); // Đảo ngược giá trị refresh để kích hoạt useEffect
+                        navigation.navigate(route.name); // Điều hướng lại đến tab hiện tại
+                    },
                 })}
             />
             <Tab.Screen

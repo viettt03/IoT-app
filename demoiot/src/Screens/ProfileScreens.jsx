@@ -33,7 +33,6 @@ const ProfileScreen = (props) => {
                 <Text className='w-[80%] py-3 text-[#000] font-sans leading-6 text-[17px]' style={{ marginTop: -10 }}>
                     Định nghĩa các thuộc tính được truyền vào các component React:
                     Trong React, các component có thể nhận các thuộc tính (props)
-
                 </Text>
 
 
@@ -69,7 +68,7 @@ const ProfileScreen = (props) => {
 
                     <TouchableOpacity
                         className="py-2 px-4 rounded mb-2"
-                        onPress={() => handleLinkPress('https://example.com/link1')}
+                        onPress={() => handleLinkPress('https://github.com/viettt03/IoT-app.git')}
                     >
                         <Text className="text-blue-400 text-lg border-b-2 border-b-blue-400">GitHub</Text>
                     </TouchableOpacity>

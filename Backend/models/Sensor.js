@@ -1,20 +1,20 @@
 const mongoose = require('mongoose');
 const AutoIncrement = require('mongoose-sequence')(mongoose);
 
-const table2Schema = mongoose.Schema({
-    device: {
+const sensorSchema = mongoose.Schema({
+    temp: {
         type: Number,
         required: true,
     },
-    control: {
+    humidity: {
         type: Number,
         required: true,
     },
-    action: {
+    light: {
         type: Number,
         required: true,
     },
     timestamp: { type: Date, default: Date.now }
 });
-table2Schema.plugin(AutoIncrement, { inc_field: 'order2' });
-module.exports = mongoose.model('Table2', table2Schema)
+sensorSchema.plugin(AutoIncrement, { inc_field: 'order' });
+module.exports = mongoose.model('Sensor', sensorSchema)
