@@ -138,5 +138,5 @@ void loop() {
     Serial.println(payload);
   }
 
-  delay(2000);  // Đọc dữ liệu mỗi 2 giây
+  delay(5000);  // Đọc dữ liệu mỗi 2 giây
 }

@@ -4,7 +4,6 @@ import { Context } from '../Context/Context';
 import Icon from 'react-native-vector-icons/AntDesign';
 import { Dropdown } from 'react-native-element-dropdown';
 import Icon2 from 'react-native-vector-icons/FontAwesome';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import renderDateTimePicker from '../components/renderDateTimePicker';
 import PaginationComponent from '../components/PaginationComponent ';
 
@@ -17,7 +16,7 @@ const combineDateAndTime = (date, time) => {
     const combined = new Date(date);
     combined.setHours(time.getHours());
     combined.setMinutes(time.getMinutes());
-    combined.setSeconds(0);
+    combined.setSeconds(60);
     return combined;
 };
 
@@ -36,67 +35,71 @@ const ControlHistory = ({ route }) => {
     const [isFocusDevice, setIsFocusDevice] = useState(false);
     const [isFocusAction, setIsFocusAction] = useState(false);
     const [search, setSearch] = useState(false)
+    const [limit, setLimit] = useState(10)
     const [pickerState, setPickerState] = useState({
         showStartDatePicker: false,
         showEndDatePicker: false,
         showStartTimePicker: false,
         showEndTimePicker: false
     });
-    const { refresh } = route.params || {};
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     useEffect(() => {
         fetchControlHistory({
-            action: action,
-            deviceId: deviceId,
+            action: action === 2 ? null : action,
+            deviceId: deviceId === 0 ? null : deviceId,
             page: pageControl,
             startTime: combineDateAndTime(startDate, startHour),
-            endTime: combineDateAndTime(endDate, endHour)
+            endTime: combineDateAndTime(endDate, endHour),
+            limit: limit
         });
-    }, [pageControl, deviceId, action, search, refresh])
+        setSearch(false)
+    }, [pageControl, deviceId, action, search, limit])
+
+
+    const onRefresh = () => {
+        setIsRefreshing(true);
+
+        const currentHour = new Date();
+        setEndHour(currentHour);
+
+        const params = {
+            action: action === 2 ? null : action,
+            deviceId: deviceId === 0 ? null : deviceId,
+            page: 1,
+            startTime: combineDateAndTime(startDate, startHour),
+            endTime: combineDateAndTime(endDate, endHour),
+            limit: limit
+        };
+        fetchControlHistory(params).finally(() => setIsRefreshing(false));
+        setPageControl(1)
+    };
+
 
     const handlePageChange = (pageNumber) => {
         setPageControl(pageNumber)
     };
 
-    const getVisiblePages = (currentPage) => {
-        if (totalPagesControl <= 3) {
-            return Array.from({ length: totalPagesControl }, (_, i) => i + 1);
-        }
-        if (currentPage === 1) {
-            return [1, 2, 3];
-        } else if (currentPage === totalPagesControl) {
-            return [totalPagesControl - 2, totalPagesControl - 1, totalPagesControl];
-        } else {
-            return [currentPage - 1, currentPage, currentPage + 1];
-        }
+    const handleLimitChange = (limit) => {
+        setLimit(limit)
     };
-    const displayPages = getVisiblePages(pageControl);
 
     const deviceOptions = [
+        { label: 'All', value: 0 },
         { label: 'Ceiling Fan', value: 1 },
         { label: 'Air Conditioner', value: 2 },
         { label: 'Lamp', value: 3 },
     ];
 
     const actionOptions = [
+        { label: 'All', value: 2 },
         { label: 'ON', value: 1 },
         { label: 'OFF', value: 0 },
     ];
 
-    const renderLabel = () => {
-        if (action || isFocus) {
-            return (
-                <Text style={[styles.label, isFocus && { color: 'blue' }]}>
-                    Dropdown label
-                </Text>
-            );
-        }
-        return null;
-    };
-
-    const resetFilters = useCallback(() => {
-        setAction(null);
-        setDeviceId(null);
+    const resetFilters = () => {
+        setAction(2);
+        setDeviceId(0);
         setPageControl(1);
         setSelectedDevice('Select device');
         setIsFocusAction(false)
@@ -107,11 +110,13 @@ const ControlHistory = ({ route }) => {
         setEndDate(new Date());
         setStartHour(new Date());
         setEndHour(new Date());
-
-    }, []);
+    };
 
     const handleSearch = () => {
-        setSearch(true)
+        setSearch(true);
+        setPageControl(1);
+        setAction(null);
+        setDeviceId(null);
     };
 
     return (
@@ -133,6 +138,7 @@ const ControlHistory = ({ route }) => {
                             setDeviceId(item.value);
                             setSelectedDevice(item.label);
                             setIsFocusDevice(true);
+                            setPageControl(1);
                         }}
                         renderLeftIcon={() => (
                             <Icon name="Safety" size={20} color={isFocusDevice ? 'blue' : 'black'} />
@@ -152,6 +158,8 @@ const ControlHistory = ({ route }) => {
                         onChange={(item) => {
                             setAction(item.value);
                             setIsFocusAction(false);
+                            setPageControl(1);
+
                         }}
                         renderLeftIcon={() => (
                             <Icon name="Safety" size={20} color={isFocusAction ? 'blue' : 'black'} />
@@ -171,7 +179,7 @@ const ControlHistory = ({ route }) => {
                         onPress={() => setIsVisibleTime(!isVisibleTime)}
                         className="bg-blue-500 py-2 px-4 rounded-lg mb-4"
                     >
-                        <Text className="text-white text-center text-lg">Chọn thời gian</Text>
+                        <Text className="text-white text-center text-lg">Select Time</Text>
                     </TouchableOpacity>
 
                     {isVisibleTime && (
@@ -212,13 +220,12 @@ const ControlHistory = ({ route }) => {
 
             </View>
 
-
-
-
             <FlatList
                 data={controlHistory}
                 keyExtractor={(item, index) => index.toString()}
-                contentContainerStyle={{ paddingBottom: 20 }}  // Thêm khoảng trống dưới để hỗ trợ cuộn
+                contentContainerStyle={{ paddingBottom: 20 }}
+                refreshing={isRefreshing} // For pull-to-refresh
+                onRefresh={onRefresh}
                 renderItem={({ item, index }) => {
                     return (
                         <View
@@ -311,6 +318,8 @@ const ControlHistory = ({ route }) => {
                     page={pageControl}
                     totalPages={totalPagesControl}
                     handlePageChange={handlePageChange}
+                    limit={limit}
+                    setLimit={setLimit}
                 />
             </View>
 

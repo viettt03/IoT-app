@@ -1,6 +1,5 @@
 const Control = require('../models/Control');
 
-
 const device = [
     'Ceiling Fan',
     'Air Conditioner',

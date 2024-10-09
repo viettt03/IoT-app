@@ -1,23 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { TextInput, TouchableOpacity, View, Text } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { Dropdown } from 'react-native-element-dropdown';
-import Icon2 from 'react-native-vector-icons/AntDesign';
 
-
-const PaginationComponent = ({ page, totalPages, handlePageChange, limit, setLimit }) => {
+const PaginationComponent = ({ page, totalPages, handlePageChange, limit, handleLimitChange }) => {
     const [tempPage, setTempPage] = useState(page.toString());
     const [limitRecord, setLimitRecord] = useState(limit.toString());
 
-    const [isFocus, setIsFocus] = useState(false);
     useEffect(() => {
         setTempPage(page.toString());
     }, [page]);
 
 
-    // useEffect(() => {
-    //     setLimit(Number(limitRecord))
-    // }, [limitRecord]);
+    useEffect(() => {
+        setLimitRecord(limit.toString())
+    }, [limit]);
 
     const handlePreviousPage = () => {
         const newPage = Number(tempPage) - 1;
@@ -33,12 +29,12 @@ const PaginationComponent = ({ page, totalPages, handlePageChange, limit, setLim
         }
     };
 
-    const step = 10;
-    const roundedNumber = Math.ceil(50 / step) * step;
-    const result = [];
-    for (let i = step; i <= roundedNumber; i += step) {
-        result.push({ label: i.toString(), value: i });
-    }
+    const handleChangeLimit = () => {
+        const newLimit = Number(limitRecord);
+        if (newLimit != limit) {
+            handleLimitChange(newLimit);
+        }
+    };
 
     return (
         <View className="flex-row justify-between mx-4 mt-1 w-[85%]">
@@ -73,7 +69,7 @@ const PaginationComponent = ({ page, totalPages, handlePageChange, limit, setLim
                 />
                 <Text className="font-bold text-xl text-black">/ {totalPages}</Text>
             </View>
-            {/* <TextInput
+            <TextInput
                 className="border border-black-600 rounded-md px-2 py-1 text-center font-bold text-black-600 w-12 text-lg"
                 value={limitRecord}
                 keyboardType="numeric"
@@ -89,22 +85,6 @@ const PaginationComponent = ({ page, totalPages, handlePageChange, limit, setLim
                         setLimitRecord(limit.toString());
                     }
                 }}
-            /> */}
-
-            <Dropdown
-                className={`w-[18%] h-12 border ${isFocus ? 'border-blue-500' : 'border-gray-300'} rounded-lg px-2`}
-                data={result}
-                labelField="label"
-                valueField="value"
-                value={limit}
-                onFocus={() => setIsFocus(true)}
-                onBlur={() => setIsFocus(false)}
-                onChange={(item) => {
-                    setIsFocus(false);
-                    setLimit(item.value);
-                    handlePageChange(1);
-                }}
-
             />
             {page < totalPages ? (
                 <TouchableOpacity

@@ -19,7 +19,7 @@ const combineDateAndTime = (date, time) => {
     const combined = new Date(date);
     combined.setHours(time.getHours());
     combined.setMinutes(time.getMinutes());
-    combined.setSeconds(0);
+    combined.setSeconds(60);
     return combined;
 };
 
@@ -35,17 +35,18 @@ export default function SensorHistory() {
     const [endDate, setEndDate] = useState(new Date());
     const [startHour, setStartHour] = useState(new Date());
     const [endHour, setEndHour] = useState(new Date());
-    const [search, setSearch] = useState(1)
+    const [search, setSearch] = useState(0)
     const [pickerState, setPickerState] = useState({
         showStartDatePicker: false,
         showEndDatePicker: false,
         showStartTimePicker: false,
         showEndTimePicker: false
     });
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [limit, setLimit] = useState(10)
 
 
-    const { sensorHistory, pageSensor, totalPagesSensor, fetchSensorHistory, setPageSensor, currentData } = useContext(Context);
-
+    const { sensorHistory, pageSensor, totalPagesSensor, fetchSensorHistory, setPageSensor } = useContext(Context);
 
     useEffect(() => {
         let orderBy = selectedColumn;
@@ -58,14 +59,40 @@ export default function SensorHistory() {
             startTime: combineDateAndTime(startDate, startHour),
             endTime: combineDateAndTime(endDate, endHour),
             minValue: minValue,
-            maxValue: maxValue
+            maxValue: maxValue,
+            limit: limit
         };
         fetchSensorHistory(params);
-    }, [direction, pageSensor, search, selectedColumn, currentData])
+        setSearch(0)
+    }, [direction, pageSensor, search, selectedColumn, limit])
 
+
+    const onRefresh = () => {
+        setIsRefreshing(true);
+        // Refetch data here
+        let orderBy = selectedColumn;
+        if (orderBy === 'id') orderBy = 'order';
+        const params = {
+            sortBy: orderBy,
+            order: direction,
+            page: 1,
+            selectField: selectedField,
+            startTime: combineDateAndTime(startDate, startHour),
+            endTime: combineDateAndTime(endDate, endHour),
+            minValue: minValue,
+            maxValue: maxValue,
+            limit: limit
+        };
+        fetchSensorHistory(params).finally(() => setIsRefreshing(false));
+        setPageSensor(1)
+    };
 
     const handlePageChange = (pageNumber) => {
         setPageSensor(pageNumber);
+    };
+
+    const handleLimitChange = (limit) => {
+        setLimit(limit)
     };
 
     const handleFieldChange = (value) => {
@@ -74,7 +101,13 @@ export default function SensorHistory() {
         setMaxValue('');
     };
 
-    const handleSearch = useCallback(() => {
+    // const handleSearch = useCallback(
+    //     debounce(() => handleSearchValue(), 500),  // 500ms debounce
+    //     [selectedField, minValue, maxValue]
+    // );
+
+
+    const handleSearch = () => {
         if (selectedField === 'time') {
             const finalStartDate = combineDateAndTime(startDate, startHour);
             const finalEndDate = combineDateAndTime(endDate, endHour);
@@ -93,10 +126,10 @@ export default function SensorHistory() {
                 setDirection('desc');
             } else return;
         }
-    }, [selectedField, startDate, endDate, startHour, endHour, minValue, maxValue]);
+    };
 
 
-    const resetFilters = useCallback(() => {
+    const resetFilters = () => {
         setSelectedField(null);
         setSelectedColumn('id')
         setMinValue(0);
@@ -107,23 +140,23 @@ export default function SensorHistory() {
         setEndHour(new Date());
         setDirection('desc');
         setPageSensor(1);
-    }, [pageSensor]);
+    };
 
-    const validateDates = useCallback((start, end) => {
+    const validateDates = () => (start, end) => {
         if (end < start) {
             Alert.alert("End date must be greater than start date!");
             return false;
         }
         return true;
-    }, []);
+    };
 
-    const validateValue = useCallback((min, max) => {
+    const validateValue = () => (min, max) => {
         if (max < min) {
             Alert.alert("The max value must be greater than the min value!");
             return false;
         }
         return true;
-    }, []);
+    };
 
 
 
@@ -158,7 +191,7 @@ export default function SensorHistory() {
             <View className="p-4">
                 <View className="mb-1">
                     <View className="flex-row justify-between">
-                        <Text className="text-xl font-semibold mb-3 text-gray-700">Tìm kiếm theo:</Text>
+                        <Text className="text-xl font-semibold mb-3 text-gray-700">Search By:</Text>
                         <TouchableOpacity
                             onPress={resetFilters}
                             className="rounded-lg flex justify-center items-center mb-3 ">
@@ -171,29 +204,29 @@ export default function SensorHistory() {
                             selectedValue={selectedField}
                             onValueChange={handleFieldChange}
                             className="h-10 bg-white justify-center items-center">
-                            <Picker.Item label="Chọn trường" value={null} style={{ fontWeight: '1000', fontSize: 20, color: 'black' }} />
-                            <Picker.Item label="Nhiệt độ" value="temp" />
-                            <Picker.Item label="Độ ẩm" value="humidity" />
-                            <Picker.Item label="Ánh sáng" value="light" />
-                            <Picker.Item label="Thời gian" value="time" />
+                            <Picker.Item label="Select field" value={null} style={{ fontWeight: '1000', fontSize: 20, color: 'black' }} />
+                            <Picker.Item label="Temperature" value="temp" />
+                            <Picker.Item label="Humidity" value="humidity" />
+                            <Picker.Item label="Light" value="light" />
+                            <Picker.Item label="Time" value="time" />
                         </Picker>
                     </View>
                 </View>
 
                 {selectedField && selectedField !== 'time' && (
                     <View className="mb-4">
-                        <Text className="text-lg font-semibold mb-3 text-gray-700">Nhập khoảng giá trị:</Text>
+                        <Text className="text-lg font-semibold mb-3 text-gray-700">Range input:</Text>
                         <View className="flex-row justify-between space-x-2">
                             <TextInput
                                 className="border border-gray-300 rounded-lg h-10 px-4 flex-1 text-gray-700"
-                                placeholder="Giá trị dưới"
+                                placeholder="Min value"
                                 keyboardType="numeric"
                                 value={minValue}
                                 onChangeText={setMinValue}
                             />
                             <TextInput
                                 className="border border-gray-300 rounded-lg h-10 px-4 flex-1 text-gray-700"
-                                placeholder="Giá trị trên"
+                                placeholder="Max value"
                                 keyboardType="numeric"
                                 value={maxValue}
                                 onChangeText={setMaxValue}
@@ -252,6 +285,8 @@ export default function SensorHistory() {
                     ListHeaderComponent={tableHeader}
                     contentContainerStyle={{ paddingBottom: 20 }}
                     stickyHeaderIndices={[0]}
+                    refreshing={isRefreshing} // For pull-to-refresh
+                    onRefresh={onRefresh}
                     renderItem={({ item, index }) => {
                         return (
                             <View
@@ -275,6 +310,8 @@ export default function SensorHistory() {
                     page={pageSensor}
                     totalPages={totalPagesSensor}
                     handlePageChange={handlePageChange}
+                    limit={limit}
+                    setLimit={setLimit}
                 />
             </View>
         </SafeAreaView>

@@ -24,8 +24,9 @@ export const Provider = ({ children }) => {
         startTime = new Date(0),
         endTime = new Date(),
         page = 1,
+        limit = 10
     }) => {
-        const url = 'http://10.0.2.2:8080/api/getDataSensor';
+        const url = 'http://192.168.0.102:8080/api/getDataSensor';
         try {
 
             const response = await axios.get(url, {
@@ -38,7 +39,8 @@ export const Provider = ({ children }) => {
                     maxValue,
                     selectField,
                     startTime,
-                    endTime
+                    endTime,
+                    limit
                 }
             });
             setSensorHistory(response.data.data);
@@ -55,12 +57,12 @@ export const Provider = ({ children }) => {
         endTime = new Date(),
         page = 1,
         deviceId = null,
-        action = null
-
+        action = null,
+        limit = 10
 
     }) => {
 
-        const url = 'http://10.0.2.2:8080/api/getDataControl';
+        const url = 'http://192.168.0.102:8080/api/getDataControl';
         try {
             const response = await axios.get(url, {
                 params: {
@@ -69,7 +71,8 @@ export const Provider = ({ children }) => {
                     startTime,
                     endTime,
                     deviceId,
-                    action
+                    action,
+                    limit
                 }
             });
             setControlHistory(response.data.data);
@@ -80,60 +83,60 @@ export const Provider = ({ children }) => {
     };
 
 
-    useEffect(() => {
-        const ws = new WebSocket('ws://10.0.2.2:8080');
+    // useEffect(() => {
+    //     const ws = new WebSocket('ws://192.168.0.102:8080');
 
-        ws.onopen = () => {
-            console.log('Connected to WebSocket server');
-        };
+    //     ws.onopen = () => {
+    //         console.log('Connected to WebSocket server');
+    //     };
 
-        ws.onmessage = (event) => {
-            const res = JSON.parse(event.data);
-            if (res.type === 'sensorData') {
-                const data = res.data
-                setCurrentData({
-                    temp: Number(data[0]),
-                    humidity: Number(data[1]),
-                    light: Number(data[2])
-                });
+    //     ws.onmessage = (event) => {
+    //         const res = JSON.parse(event.data);
+    //         if (res.type === 'sensorData') {
+    //             const data = res.data
+    //             setCurrentData({
+    //                 temp: Number(data[0]),
+    //                 humidity: Number(data[1]),
+    //                 light: Number(data[2])
+    //             });
 
-                setTemps(prevTemps => {
-                    const updatedTemps = [...prevTemps, { value: Number(data[0]), dataPointText: data[0] }];
-                    if (updatedTemps.length > 10) updatedTemps.shift();
-                    return updatedTemps;
-                });
+    //             setTemps(prevTemps => {
+    //                 const updatedTemps = [...prevTemps, { value: Number(data[0]), dataPointText: data[0] }];
+    //                 if (updatedTemps.length > 10) updatedTemps.shift();
+    //                 return updatedTemps;
+    //             });
 
-                setHums(prevHums => {
-                    const updatedHums = [...prevHums, { value: Number(data[1]), dataPointText: data[1] }];
-                    if (updatedHums.length > 10) updatedHums.shift();
-                    return updatedHums;
-                });
+    //             setHums(prevHums => {
+    //                 const updatedHums = [...prevHums, { value: Number(data[1]), dataPointText: data[1] }];
+    //                 if (updatedHums.length > 10) updatedHums.shift();
+    //                 return updatedHums;
+    //             });
 
-                setLights(prevLights => {
-                    const updatedLights = [...prevLights, { value: Number(data[2]), dataPointText: data[2] }];
-                    if (updatedLights.length > 10) updatedLights.shift();
-                    return updatedLights;
-                });
-            }
-        };
+    //             setLights(prevLights => {
+    //                 const updatedLights = [...prevLights, { value: Number(data[2]), dataPointText: data[2] }];
+    //                 if (updatedLights.length > 10) updatedLights.shift();
+    //                 return updatedLights;
+    //             });
+    //         }
+    //     };
 
-        ws.onclose = () => {
-            console.log('WebSocket connection closed');
-        };
+    //     ws.onclose = () => {
+    //         console.log('WebSocket connection closed');
+    //     };
 
-        ws.onerror = (error) => {
-            console.error('WebSocket error: ', error);
-        };
+    //     ws.onerror = (error) => {
+    //         console.error('WebSocket error: ', error);
+    //     };
 
-        return () => {
-            ws.close();
-        };
-    }, []);
+    //     return () => {
+    //         ws.close();
+    //     };
+    // }, []);
 
     return (
         <Context.Provider value={{
-            currentData,
-            temps, hums, lights,
+            // currentData,
+            // temps, hums, lights,
             sensorHistory,
             fetchSensorHistory,
             pageSensor,

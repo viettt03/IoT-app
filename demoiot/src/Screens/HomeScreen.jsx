@@ -18,8 +18,13 @@ const HomeScreen = () => {
     const [active1, setActive1] = useState(false);
     const [active2, setActive2] = useState(false);
     const [active3, setActive3] = useState(false);
+    const [currentData, setCurrentData] = useState({ temp: 0, humidity: 0, light: 0 });
+    const [temps, setTemps] = useState([{ value: 0, dataPointText: '0' }])
+    const [hums, setHums] = useState([{ value: 0, dataPointText: '0' }])
+    const [lights, setLights] = useState([{ value: 0, dataPointText: '0' }])
 
-    const { currentData, temps, hums, lights } = useContext(Context);
+
+    // const { currentData, temps, hums, lights } = useContext(Context);
 
     const toggleSwitch = (deviceId, enabled, setEnabled) => {
         setEnabled(pre => !pre)
@@ -27,7 +32,7 @@ const HomeScreen = () => {
     }
 
     const sendData = async (deviceId, enabled) => {
-        await axios.post('http://10.0.2.2:8080/api/postDataControl', { deviceId, control: enabled === false ? 1 : 0 })
+        await axios.post('http://192.168.0.102:8080/api/postDataControl', { deviceId, control: enabled === false ? 1 : 0 })
             .then(response => {
                 console.log('Data sent successfully');
             })
@@ -44,7 +49,7 @@ const HomeScreen = () => {
 
 
     useEffect(() => {
-        const ws = new WebSocket('ws://10.0.2.2:8080');
+        const ws = new WebSocket('ws://192.168.0.102:8080');
 
         ws.onopen = () => {
             console.log('Connected to WebSocket server');
@@ -84,6 +89,32 @@ const HomeScreen = () => {
                         setActive3(false)
                         setIsEnabled3(false)
                     }
+            }
+            else {
+                const data = res.data
+                setCurrentData({
+                    temp: Number(data[0]),
+                    humidity: Number(data[1]),
+                    light: Number(data[2])
+                });
+
+                setTemps(prevTemps => {
+                    const updatedTemps = [...prevTemps, { value: Number(data[0]), dataPointText: data[0] }];
+                    if (updatedTemps.length > 10) updatedTemps.shift();
+                    return updatedTemps;
+                });
+
+                setHums(prevHums => {
+                    const updatedHums = [...prevHums, { value: Number(data[1]), dataPointText: data[1] }];
+                    if (updatedHums.length > 10) updatedHums.shift();
+                    return updatedHums;
+                });
+
+                setLights(prevLights => {
+                    const updatedLights = [...prevLights, { value: Number(data[2]), dataPointText: data[2] }];
+                    if (updatedLights.length > 10) updatedLights.shift();
+                    return updatedLights;
+                });
             }
         };
 
@@ -158,7 +189,7 @@ const HomeScreen = () => {
                 {/* Header */}
                 <View className="flex-row items-center mx-6 mt-6 ">
                     <Image
-                        source={{ uri: 'https://photo.znews.vn/w660/Uploaded/qhj_yvobvhfwbv/2018_07_18/Nguyen_Huy_Binh1.jpg' }} // Replace with actual image URL
+                        source={{ uri: 'https://res.cloudinary.com/dlggsv9ks/image/upload/v1728316241/avatars/avt_rk1boy.jpg' }} // Replace with actual image URL
                         className="w-12 h-12 rounded-full"
                     />
                     <View className="ml-4">
@@ -194,7 +225,7 @@ const HomeScreen = () => {
                         <SensorComponent
                             score={currentData.light || 0}
                             maxScore={3000}
-                            gradientColors={['#eac6f9', '#c65af3']}
+                            gradientColors={['#d7c5de', '#c65af3']}
                         />
                     </View>
                 </View>
@@ -481,6 +512,7 @@ const HomeScreen = () => {
                                 />
                             </View>
                         </View>
+
                     </View>
                 </View>
 
