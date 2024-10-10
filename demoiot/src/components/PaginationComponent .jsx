@@ -5,9 +5,8 @@ import { Dropdown } from 'react-native-element-dropdown';
 import Icon2 from 'react-native-vector-icons/AntDesign';
 
 
-const PaginationComponent = ({ page, totalPages, handlePageChange, limit, setLimit }) => {
+const PaginationComponent = ({ page, totalPages, setPage, limit, setLimit }) => {
     const [tempPage, setTempPage] = useState(page.toString());
-    const [limitRecord, setLimitRecord] = useState(limit.toString());
 
     const [isFocus, setIsFocus] = useState(false);
     useEffect(() => {
@@ -15,21 +14,17 @@ const PaginationComponent = ({ page, totalPages, handlePageChange, limit, setLim
     }, [page]);
 
 
-    // useEffect(() => {
-    //     setLimit(Number(limitRecord))
-    // }, [limitRecord]);
-
     const handlePreviousPage = () => {
         const newPage = Number(tempPage) - 1;
         if (newPage > 0) {
-            handlePageChange(newPage);
+            setPage(newPage);
         }
     };
 
     const handleNextPage = () => {
         const newPage = Number(tempPage) + 1;
-        if (newPage <= totalPages) {
-            handlePageChange(newPage);
+        if (newPage < totalPages) {
+            setPage(newPage);
         }
     };
 
@@ -65,31 +60,18 @@ const PaginationComponent = ({ page, totalPages, handlePageChange, limit, setLim
                     onSubmitEditing={() => {
                         const newPage = Number(tempPage);
                         if (!isNaN(newPage) && newPage > 0 && newPage <= totalPages) {
-                            handlePageChange(newPage);
+                            setPage(newPage);
                         } else {
                             setTempPage(page.toString());
                         }
                     }}
+                    onEndEditing={() => {
+                        setTempPage(page.toString());
+                    }}
+
                 />
                 <Text className="font-bold text-xl text-black">/ {totalPages}</Text>
             </View>
-            {/* <TextInput
-                className="border border-black-600 rounded-md px-2 py-1 text-center font-bold text-black-600 w-12 text-lg"
-                value={limitRecord}
-                keyboardType="numeric"
-                returnKeyType="search"
-                onChangeText={(text) => {
-                    setLimitRecord(text);
-                }}
-                onSubmitEditing={() => {
-                    const newLimit = Number(tempPage);
-                    if (!isNaN(newLimit) && newLimit > 0) {
-                        handleChangeLimit(newLimit);
-                    } else {
-                        setLimitRecord(limit.toString());
-                    }
-                }}
-            /> */}
 
             <Dropdown
                 className={`w-[18%] h-12 border ${isFocus ? 'border-blue-500' : 'border-gray-300'} rounded-lg px-2`}
@@ -102,7 +84,7 @@ const PaginationComponent = ({ page, totalPages, handlePageChange, limit, setLim
                 onChange={(item) => {
                     setIsFocus(false);
                     setLimit(item.value);
-                    handlePageChange(1);
+                    setPage(1);
                 }}
 
             />

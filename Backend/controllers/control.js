@@ -8,10 +8,13 @@ const device = [
 
 exports.saveControlData = async (data) => {
     try {
+        const time = new Date();
+        time.setMilliseconds(0);
         const newData = new Control({
             deviceId: Number(data[0]),
             name: device[Number(data[0]) - 1],
-            action: Number(data[1])
+            action: Number(data[1]),
+            timestamp: time
         });
         await newData.save();
         console.log('Data control saved to database');
@@ -26,15 +29,9 @@ exports.getDatatControl = async (req, res) => {
         deviceId = null,
         page = 1,
         limit = 10,
-        startTime = new Date(0),
-        endTime = new Date(),
+        date = null
     } = req.query;
-    let query = {
-        timestamp: {
-            $gte: new Date(startTime),
-            $lte: new Date(endTime)
-        }
-    }
+    let query = {}
 
     if (action && deviceId) {
         query.action = action;
@@ -46,6 +43,7 @@ exports.getDatatControl = async (req, res) => {
         query.deviceId = deviceId
 
     }
+    if (date) query.timestamp = new Date(date);
     try {
         const data = await Control.find(query)
             .sort({ timestamp: -1 })

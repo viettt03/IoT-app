@@ -2,10 +2,13 @@ const Sensor = require('../models/Sensor');
 
 exports.saveSensorData = async (data) => {
     try {
+        const time = new Date();
+        time.setMilliseconds(0);
         const newData = new Sensor({
             temp: Number(data[0]),
             humidity: Number(data[1]),
-            light: Number(data[2])
+            light: Number(data[2]),
+            timestamp: time
         });
         await newData.save();
         console.log('Data saved to database');
@@ -22,8 +25,7 @@ exports.getDataSensor = async (req, res) => {
         minValue = 0,
         maxValue = Number.MAX_SAFE_INTEGER,
         selectField = 'temp',
-        startTime = new Date(0),
-        endTime = new Date(),
+        date = null,
         page = 1,
         limit = 10
     } = req.query;
@@ -32,8 +34,7 @@ exports.getDataSensor = async (req, res) => {
     const parsedLimit = parseInt(limit, 10) || 10;
     const parsedMinValue = parseFloat(minValue);
     const parsedMaxValue = parseFloat(maxValue);
-    const parsedStartTime = new Date(startTime);
-    const parsedEndTime = new Date(endTime);
+
 
     if (parsedPage < 1 || parsedLimit < 1) {
         return res.status(400).json({ error: 'Trang và giới hạn phải là số nguyên dương' });
@@ -47,7 +48,7 @@ exports.getDataSensor = async (req, res) => {
     }
 
     if (selectField === 'time') {
-        query.timestamp = { $gte: parsedStartTime, $lte: parsedEndTime };
+        query.timestamp = new Date(date);
     } else {
         query[selectField] = { $gte: parsedMinValue, $lte: parsedMaxValue };
     }

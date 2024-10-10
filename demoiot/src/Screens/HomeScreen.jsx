@@ -32,7 +32,7 @@ const HomeScreen = () => {
     }
 
     const sendData = async (deviceId, enabled) => {
-        await axios.post('http://192.168.0.102:8080/api/postDataControl', { deviceId, control: enabled === false ? 1 : 0 })
+        await axios.post('http://192.168.104.89:8080/api/postDataControl', { deviceId, control: enabled === false ? 1 : 0 })
             .then(response => {
                 console.log('Data sent successfully');
             })
@@ -49,7 +49,7 @@ const HomeScreen = () => {
 
 
     useEffect(() => {
-        const ws = new WebSocket('ws://192.168.0.102:8080');
+        const ws = new WebSocket('ws://192.168.104.89:8080');
 
         ws.onopen = () => {
             console.log('Connected to WebSocket server');
@@ -373,7 +373,7 @@ const HomeScreen = () => {
                         showVerticalLines
                         spacing={40}
                         initialSpacing={6}
-                        maxValue={600}
+                        maxValue={2200}
                         color1="skyblue"
                         color2="orange"
                         color3='green'

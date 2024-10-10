@@ -14,7 +14,10 @@ const controlSchema = mongoose.Schema({
         type: Number,
         required: true,
     },
-    timestamp: { type: Date, default: Date.now }
+    timestamp: {
+        type: Date,
+        required: true,
+    }
 });
 controlSchema.plugin(AutoIncrement, { inc_field: 'order2' });
 module.exports = mongoose.model('Control', controlSchema)

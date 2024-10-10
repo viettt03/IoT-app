@@ -7,21 +7,21 @@ import Icon from 'react-native-vector-icons/AntDesign';
 import { Picker } from '@react-native-picker/picker';
 import Icon2 from 'react-native-vector-icons/FontAwesome';
 import debounce from 'lodash/debounce';
-import renderDateTimePicker from '../components/renderDateTimePicker';
 import PaginationComponent from '../components/PaginationComponent ';
+import Toast from 'react-native-toast-message';
+import Clipboard from '@react-native-clipboard/clipboard';
 
-const toDate = (date) => {
-    const string = new Date(date);
-    return string.toLocaleString();
+function formatDate(string) {
+
+    const date = new Date(string)
+    let day = String(date.getDate()).padStart(2, '0');
+    let month = String(date.getMonth() + 1).padStart(2, '0'); // Tháng trong JavaScript tính từ 0
+    let year = date.getFullYear();
+    let hours = String(date.getHours()).padStart(2, '0');
+    let minutes = String(date.getMinutes()).padStart(2, '0');
+    let seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 }
-
-const combineDateAndTime = (date, time) => {
-    const combined = new Date(date);
-    combined.setHours(time.getHours());
-    combined.setMinutes(time.getMinutes());
-    combined.setSeconds(60);
-    return combined;
-};
 
 export default function SensorHistory() {
 
@@ -31,17 +31,10 @@ export default function SensorHistory() {
     const [selectedField, setSelectedField] = useState(null);
     const [minValue, setMinValue] = useState(0);
     const [maxValue, setMaxValue] = useState(Number.MAX_SAFE_INTEGER);
-    const [startDate, setStartDate] = useState(new Date(2024, 8, 20));
-    const [endDate, setEndDate] = useState(new Date());
-    const [startHour, setStartHour] = useState(new Date());
-    const [endHour, setEndHour] = useState(new Date());
+    const [date, setDate] = useState(null);
+    const [inputDate, setInputDate] = useState('');
     const [search, setSearch] = useState(0)
-    const [pickerState, setPickerState] = useState({
-        showStartDatePicker: false,
-        showEndDatePicker: false,
-        showStartTimePicker: false,
-        showEndTimePicker: false
-    });
+
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [limit, setLimit] = useState(10)
 
@@ -56,15 +49,13 @@ export default function SensorHistory() {
             order: direction,
             page: pageSensor,
             selectField: selectedField,
-            startTime: combineDateAndTime(startDate, startHour),
-            endTime: combineDateAndTime(endDate, endHour),
+            date: date,
             minValue: minValue,
             maxValue: maxValue,
             limit: limit
         };
         fetchSensorHistory(params);
-        setSearch(0)
-    }, [direction, pageSensor, search, selectedColumn, limit])
+    }, [direction, pageSensor, search, selectedColumn, limit, date])
 
 
     const onRefresh = () => {
@@ -77,8 +68,6 @@ export default function SensorHistory() {
             order: direction,
             page: 1,
             selectField: selectedField,
-            startTime: combineDateAndTime(startDate, startHour),
-            endTime: combineDateAndTime(endDate, endHour),
             minValue: minValue,
             maxValue: maxValue,
             limit: limit
@@ -87,80 +76,102 @@ export default function SensorHistory() {
         setPageSensor(1)
     };
 
-    const handlePageChange = (pageNumber) => {
-        setPageSensor(pageNumber);
-    };
-
-    const handleLimitChange = (limit) => {
-        setLimit(limit)
-    };
-
     const handleFieldChange = (value) => {
         setSelectedField(value);
         setMinValue('');
         setMaxValue('');
     };
 
-    // const handleSearch = useCallback(
-    //     debounce(() => handleSearchValue(), 500),  // 500ms debounce
-    //     [selectedField, minValue, maxValue]
-    // );
-
-
     const handleSearch = () => {
         if (selectedField === 'time') {
-            const finalStartDate = combineDateAndTime(startDate, startHour);
-            const finalEndDate = combineDateAndTime(endDate, endHour);
-            if (validateDates(finalStartDate, finalEndDate)) {
+            if (!inputDate || !inputDate.includes('/') || inputDate.split('/').length !== 3) {
+                Toast.show({
+                    type: 'customToast',
+                    text1: 'Invalid date format',
+                    visibilityTime: 1000,
+                });
+                return;
+            }
+            const [day, month, yearAndTime] = inputDate.split('/');
+            const [year, time] = yearAndTime.split(' ');
+            if (!year || !time) {
+                Toast.show({
+                    type: 'customToast',
+                    text1: 'Invalid date format',
+                    visibilityTime: 1000,
+                });
+                return;
+            }
+            const formattedDateString = `${year}-${month}-${day}T${time}.000`;
+            const parsedDate = new Date(formattedDateString);
+            if (!isNaN(parsedDate)) {
+                setDate(parsedDate);
                 setSearch(1);
                 setPageSensor(1);
-                setSelectedColumn('id')
-                setDirection('desc');
-
-            } else return;
+            } else {
+                Toast.show({
+                    type: 'customToast',
+                    text1: 'Invalid date format',
+                    visibilityTime: 1000,
+                });
+                return;
+            }
         } else {
-            if (validateValue(minValue, maxValue)) {
-                setSearch(2);
-                setPageSensor(1);
-                setSelectedColumn('id')
-                setDirection('desc');
-            } else return;
+            console.log(minValue, maxValue);
+
+            if (!minValue || !maxValue) {
+                Toast.show({
+                    type: 'customToast',
+                    text1: 'Enter the min and max value',
+                    visibilityTime: 1000,
+                });
+                return;
+            }
+
+            if (maxValue < minValue) {
+                Toast.show({
+                    type: 'customToast',
+                    text1: 'Max value >= min value!',
+                    visibilityTime: 1000,
+                });
+                return;
+            }
+
+            setSearch(pre => pre + 1);
+            setPageSensor(1);
+            setSelectedColumn('id')
+            setDirection('desc');
+
         }
     };
 
+
+
+    const copyToClipboard = (text) => {
+        Clipboard.setString(text);
+        Toast.show({
+            type: 'customToast',
+            text1: 'Copy text to Clipboard',
+            position: 'bottom',
+            visibilityTime: 1000,
+        });
+    };
 
     const resetFilters = () => {
         setSelectedField(null);
         setSelectedColumn('id')
         setMinValue(0);
+        setInputDate('')
         setMaxValue(Number.MAX_SAFE_INTEGER);
-        setStartDate(new Date(2024, 8, 20));
-        setEndDate(new Date());
-        setStartHour(new Date());
-        setEndHour(new Date());
+        setDate(null);
+        setSearch(0)
         setDirection('desc');
         setPageSensor(1);
     };
 
-    const validateDates = () => (start, end) => {
-        if (end < start) {
-            Alert.alert("End date must be greater than start date!");
-            return false;
-        }
-        return true;
-    };
-
-    const validateValue = () => (min, max) => {
-        if (max < min) {
-            Alert.alert("The max value must be greater than the min value!");
-            return false;
-        }
-        return true;
-    };
-
-
 
     const handleSort = useCallback((column) => {
+        if (column === 'Time') return;
         const newDirection = direction === 'desc' ? 'asc' : 'desc';
         setDirection(newDirection);
         setSelectedColumn(column.toLowerCase());
@@ -199,12 +210,14 @@ export default function SensorHistory() {
                         </TouchableOpacity>
                     </View>
 
-                    <View className="border border-gray-300 rounded-lg overflow-hidden">
+                    <View className="border border-gray-300 rounded-lg overflow-hidden" >
                         <Picker
                             selectedValue={selectedField}
                             onValueChange={handleFieldChange}
-                            className="h-10 bg-white justify-center items-center">
-                            <Picker.Item label="Select field" value={null} style={{ fontWeight: '1000', fontSize: 20, color: 'black' }} />
+                            className="h-10 bg-white justify-center items-center my-auto"
+                            style={{ fontWeight: 'bold' }}
+                        >
+                            <Picker.Item label="Select field" value={null} style={{ fontWeight: 'bold', fontSize: 20, color: 'black' }} />
                             <Picker.Item label="Temperature" value="temp" />
                             <Picker.Item label="Humidity" value="humidity" />
                             <Picker.Item label="Light" value="light" />
@@ -214,7 +227,7 @@ export default function SensorHistory() {
                 </View>
 
                 {selectedField && selectedField !== 'time' && (
-                    <View className="mb-4">
+                    <View className="mb-0">
                         <Text className="text-lg font-semibold mb-3 text-gray-700">Range input:</Text>
                         <View className="flex-row justify-between space-x-2">
                             <TextInput
@@ -243,33 +256,19 @@ export default function SensorHistory() {
 
                 {selectedField === 'time' && (
                     <View className=" flex">
-                        <Text className="text-lg font-semibold mb-3 text-gray-700">Chọn khoảng thời gian:</Text>
-                        <View className='flex-row justify-between'>
-                            <View className='flex'>
-                                {renderDateTimePicker(
-                                    startDate,
-                                    setStartDate,
-                                    pickerState.showStartDatePicker,
-                                    (val) => setPickerState({ ...pickerState, showStartDatePicker: val }),
-                                    startHour,
-
-                                    setStartHour,
-                                    pickerState.showStartTimePicker,
-                                    (val) => setPickerState({ ...pickerState, showStartTimePicker: val }))}
-                                {renderDateTimePicker(
-                                    endDate,
-                                    setEndDate,
-                                    pickerState.showEndDatePicker,
-                                    (val) => setPickerState({ ...pickerState, showEndDatePicker: val }),
-                                    endHour,
-                                    setEndHour,
-                                    pickerState.showEndTimePicker,
-                                    (val) => setPickerState({ ...pickerState, showEndTimePicker: val }))}
-                            </View>
+                        <Text className="text-lg font-semibold mb-3 text-gray-700">Search by time</Text>
+                        <View className='flex-row justify-between gap-10'>
+                            <TextInput
+                                className="border border-gray-300 rounded-lg h-10 px-4 flex-1 text-gray-700"
+                                placeholder="Enter the time"
+                                keyboardType="default"
+                                value={inputDate}
+                                onChangeText={setInputDate}
+                            />
                             <TouchableOpacity
                                 onPress={handleSearch}
                                 className="rounded-lg flex justify-center items-center mr-3">
-                                <Icon2 name='search' size={40} />
+                                <Icon2 name='search' size={30} />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -289,14 +288,29 @@ export default function SensorHistory() {
                     onRefresh={onRefresh}
                     renderItem={({ item, index }) => {
                         return (
-                            <View
-                                className={`flex-row h-16 items-center ${index % 2 === 1 ? 'bg-blue-50' : 'bg-white'
-                                    }`}>
-                                <Text className="w-[20%] text-center font-bold text-base">{item.order}</Text>
-                                <Text className="w-[20%] text-center text-base">{item.temp}</Text>
-                                <Text className="w-[20%] text-center text-base">{item.humidity}</Text>
-                                <Text className="w-[20%] text-center text-base">{item.light}</Text>
-                                <Text className="w-[20%] text-center text-sm">{toDate(item.timestamp)}</Text>
+                            <View className={`flex-row h-16 items-center ${index % 2 === 1 ? 'bg-blue-50' : 'bg-white'}`}>
+
+                                <Text className="w-[20%] text-center font-bold text-base" selectable>{item.order}</Text>
+                                <TouchableOpacity
+                                    className="w-[20%] text-center text-sm"
+                                    onLongPress={() => copyToClipboard(String(item.temp))}>
+                                    <Text className='text-center'>{item.temp}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    className="w-[20%] text-center text-sm"
+                                    onLongPress={() => copyToClipboard(String(item.humidity))}>
+                                    <Text className='text-center'>{item.humidity}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    className="w-[20%] text-center text-sm"
+                                    onLongPress={() => copyToClipboard(String(item.light))}>
+                                    <Text className='text-center'>{item.light}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    className="w-[20%] text-center text-sm"
+                                    onLongPress={() => copyToClipboard(formatDate(item.timestamp))}>
+                                    <Text className='text-center'>{formatDate(item.timestamp)}</Text>
+                                </TouchableOpacity>
                             </View>
                         );
                     }}
@@ -309,14 +323,23 @@ export default function SensorHistory() {
                 <PaginationComponent
                     page={pageSensor}
                     totalPages={totalPagesSensor}
-                    handlePageChange={handlePageChange}
+                    setPage={setPageSensor}
                     limit={limit}
                     setLimit={setLimit}
                 />
             </View>
+            <Toast config={toastConfig} />
         </SafeAreaView>
     );
+
 }
+const toastConfig = {
+    customToast: ({ text1 }) => (
+        <View className="bg-slate-600 p-2 rounded-3xl w-3/5 items-center">
+            <Text className="text-white text-base font-medium">{text1}</Text>
+        </View>
+    ),
+};
 
 const styles = StyleSheet.create({
     container: {
@@ -340,7 +363,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     columnHeader: {
-        width: "22%",
+        width: "20%",
         justifyContent: "center",
         alignItems: "center"
     },

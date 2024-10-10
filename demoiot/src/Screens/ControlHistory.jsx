@@ -6,42 +6,35 @@ import { Dropdown } from 'react-native-element-dropdown';
 import Icon2 from 'react-native-vector-icons/FontAwesome';
 import renderDateTimePicker from '../components/renderDateTimePicker';
 import PaginationComponent from '../components/PaginationComponent ';
+import Clipboard from '@react-native-clipboard/clipboard';
+import Toast from 'react-native-toast-message';
 
-const toDate = (date) => {
-    const string = new Date(date);
-    return string.toLocaleString();
+
+function formatDate(string) {
+    const date = new Date(string)
+    let day = String(date.getDate()).padStart(2, '0');
+    let month = String(date.getMonth() + 1).padStart(2, '0');
+    let year = date.getFullYear();
+
+    let hours = String(date.getHours()).padStart(2, '0');
+    let minutes = String(date.getMinutes()).padStart(2, '0');
+    let seconds = String(date.getSeconds()).padStart(2, '0');
+
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 }
 
-const combineDateAndTime = (date, time) => {
-    const combined = new Date(date);
-    combined.setHours(time.getHours());
-    combined.setMinutes(time.getMinutes());
-    combined.setSeconds(60);
-    return combined;
-};
-
-
-const ControlHistory = ({ route }) => {
+const ControlHistory = () => {
 
     const { fetchControlHistory, setPageControl, totalPagesControl, pageControl, controlHistory } = useContext(Context);
-    const [isVisibleTime, setIsVisibleTime] = useState(false);
     const [selectedDevice, setSelectedDevice] = useState('Select device');
     const [deviceId, setDeviceId] = useState(null);
     const [action, setAction] = useState(null);
-    const [startDate, setStartDate] = useState(new Date(2024, 8, 20));
-    const [startHour, setStartHour] = useState(new Date());
-    const [endDate, setEndDate] = useState(new Date());
-    const [endHour, setEndHour] = useState(new Date());
     const [isFocusDevice, setIsFocusDevice] = useState(false);
     const [isFocusAction, setIsFocusAction] = useState(false);
-    const [search, setSearch] = useState(false)
     const [limit, setLimit] = useState(10)
-    const [pickerState, setPickerState] = useState({
-        showStartDatePicker: false,
-        showEndDatePicker: false,
-        showStartTimePicker: false,
-        showEndTimePicker: false
-    });
+
+    const [date, setDate] = useState(null);
+    const [inputDate, setInputDate] = useState('');
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     useEffect(() => {
@@ -49,39 +42,23 @@ const ControlHistory = ({ route }) => {
             action: action === 2 ? null : action,
             deviceId: deviceId === 0 ? null : deviceId,
             page: pageControl,
-            startTime: combineDateAndTime(startDate, startHour),
-            endTime: combineDateAndTime(endDate, endHour),
+            date: date,
             limit: limit
         });
-        setSearch(false)
-    }, [pageControl, deviceId, action, search, limit])
+    }, [pageControl, deviceId, action, limit, date])
 
 
     const onRefresh = () => {
         setIsRefreshing(true);
-
-        const currentHour = new Date();
-        setEndHour(currentHour);
-
         const params = {
             action: action === 2 ? null : action,
             deviceId: deviceId === 0 ? null : deviceId,
             page: 1,
-            startTime: combineDateAndTime(startDate, startHour),
-            endTime: combineDateAndTime(endDate, endHour),
+            date: date,
             limit: limit
         };
         fetchControlHistory(params).finally(() => setIsRefreshing(false));
         setPageControl(1)
-    };
-
-
-    const handlePageChange = (pageNumber) => {
-        setPageControl(pageNumber)
-    };
-
-    const handleLimitChange = (limit) => {
-        setLimit(limit)
     };
 
     const deviceOptions = [
@@ -104,20 +81,57 @@ const ControlHistory = ({ route }) => {
         setSelectedDevice('Select device');
         setIsFocusAction(false)
         setIsFocusDevice(false)
-        setIsVisibleTime(false)
-        setSearch(false)
-        setStartDate(new Date(2024, 8, 20));
-        setEndDate(new Date());
-        setStartHour(new Date());
-        setEndHour(new Date());
+        setDate(null)
+        setInputDate('')
     };
 
     const handleSearch = () => {
-        setSearch(true);
-        setPageControl(1);
-        setAction(null);
-        setDeviceId(null);
+        if (!inputDate || !inputDate.includes('/') || inputDate.split('/').length !== 3) {
+            Toast.show({
+                type: 'customToast',
+                text1: 'Invalid date format',
+                visibilityTime: 1000,
+            });
+            return;
+        }
+        const [day, month, yearAndTime] = inputDate.split('/');
+        const [year, time] = yearAndTime.split(' ');
+        if (!year || !time) {
+            Toast.show({
+                type: 'customToast',
+                text1: 'Invalid date format',
+                visibilityTime: 1000,
+            });
+            return;
+        }
+        const formattedDateString = `${year}-${month}-${day}T${time}.319`;
+        const parsedDate = new Date(formattedDateString);
+        if (!isNaN(parsedDate)) {
+            setPageControl(1);
+            setAction(null);
+            setDeviceId(null);
+            setDate(parsedDate);
+        } else {
+            Toast.show({
+                type: 'customToast',
+                text1: 'Invalid date format',
+                visibilityTime: 1000,
+            });
+            return;
+        }
+
     };
+
+    const copyToClipboard = (text) => {
+        Clipboard.setString(text);
+        Toast.show({
+            type: 'customToast',
+            text1: 'Copy text to Clipboard',
+            position: 'bottom',
+            visibilityTime: 1000,
+        });
+    };
+
 
     return (
         <SafeAreaView className="flex-1 bg-gray-100">
@@ -175,47 +189,24 @@ const ControlHistory = ({ route }) => {
                 </View>
 
                 <View className="mt-2 flex">
-                    <TouchableOpacity
-                        onPress={() => setIsVisibleTime(!isVisibleTime)}
-                        className="bg-blue-500 py-2 px-4 rounded-lg mb-4"
-                    >
-                        <Text className="text-white text-center text-lg">Select Time</Text>
-                    </TouchableOpacity>
-
-                    {isVisibleTime && (
-                        <View className="flex">
-                            <View className='flex-row justify-between'>
-                                <View className='flex'>
-                                    {renderDateTimePicker(
-                                        startDate,
-                                        setStartDate,
-                                        pickerState.showStartDatePicker,
-                                        (val) => setPickerState({ ...pickerState, showStartDatePicker: val }),
-                                        startHour,
-                                        setStartHour,
-                                        pickerState.showStartTimePicker,
-                                        (val) => setPickerState({ ...pickerState, showStartTimePicker: val })
-                                    )}
-                                    {renderDateTimePicker(
-                                        endDate,
-                                        setEndDate,
-                                        pickerState.showEndDatePicker,
-                                        (val) => setPickerState({ ...pickerState, showEndDatePicker: val }),
-                                        endHour,
-                                        setEndHour,
-                                        pickerState.showEndTimePicker,
-                                        (val) => setPickerState({ ...pickerState, showEndTimePicker: val })
-                                    )}
-                                </View>
-                                <TouchableOpacity
-                                    onPress={handleSearch}
-                                    className="rounded-lg flex justify-center items-center mr-3"
-                                >
-                                    <Icon2 name='search' size={40} />
-                                </TouchableOpacity>
-                            </View>
+                    <View className=" flex">
+                        <Text className="text-lg font-semibold mb-1 text-gray-700">Search by time:</Text>
+                        <View className='flex-row justify-between gap-10'>
+                            <TextInput
+                                className="border border-gray-300 rounded-lg h-10 px-4 flex-1 text-gray-700"
+                                placeholder="Enter the time"
+                                keyboardType="default"
+                                value={inputDate}
+                                onChangeText={setInputDate}
+                            />
+                            <TouchableOpacity
+                                onPress={handleSearch}
+                                className="rounded-lg flex justify-center items-center mr-3">
+                                <Icon2 name='search' size={30} />
+                            </TouchableOpacity>
                         </View>
-                    )}
+                    </View>
+
                 </View>
 
             </View>
@@ -239,7 +230,7 @@ const ControlHistory = ({ route }) => {
                             </View>
                             <View className="flex-col">
                                 <View className="items-center justify-center">
-                                    <Text className="font-[600] text-lg text-blue-800 text-center">
+                                    <Text className="font-[600] text-lg text-blue-800 text-center" selectable>
                                         {item.name}
                                     </Text>
                                 </View>
@@ -247,87 +238,48 @@ const ControlHistory = ({ route }) => {
                                     <Text
                                         className="font-[600] text-lg text-center"
                                         style={{ color: item.action === 0 ? 'gray' : 'green' }}
+                                        selectable
                                     >
                                         {item.action === 0 ? 'OFF' : 'ON'}
                                     </Text>
                                 </View>
                             </View>
                             <View className="w-28 h-16 items-center justify-center">
-                                <Text className="font-[600] text-lg text-black text-center w-28">
-                                    {toDate(item.timestamp)}
-                                </Text>
+                                <TouchableOpacity
+                                    onLongPress={() => copyToClipboard(formatDate(item.timestamp))}
+                                >
+                                    <Text className="font-[600] text-lg text-black text-center w-28">
+                                        {formatDate(item.timestamp)}
+                                    </Text>
+                                </TouchableOpacity>
                             </View>
                         </View>
                     );
                 }}
             />
 
-            {/* <View className="flex-row justify-between mx-4 mt-1 w-[85%]">
-                {pageControl > 1 ?
-                    <TouchableOpacity
-                        className="h-10 justify-center"
-                        onPress={() => handlePageChange(pageControl - 1)}>
-                        <Icon name='caretleft' size={24} color='#2563eb' />
-
-                    </TouchableOpacity> : <View className='w-5'></View>
-                }
-
-
-                <View className="flex-row mx-auto justify-center items-center w-[70%]">
-                    {pageControl > 3 ? (
-                        <TouchableOpacity
-                            className="h-10 justify-center ml-4"
-                            onPress={() => handlePageChange(1)}>
-                            <Text className='font-bold text-xl text-center text-blue-600'>1  ...</Text>
-                        </TouchableOpacity>
-
-                    ) : <View className='w-5'></View>}
-                    {displayPages.map((item, index) => (
-                        <TouchableOpacity
-                            key={index}
-                            className="px-2 h-10 justify-center"
-                            onPress={() => handlePageChange(Number(item))}>
-                            <Text
-                                className={`font-bold text-xl text-center ${item === pageControl ? 'text-black' : 'text-blue-600'
-                                    }`}>
-                                {Number(item)}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                    {pageControl < totalPagesControl - 2 ? (
-                        <TouchableOpacity
-                            className="h-10 justify-center ml-4"
-                            onPress={() => handlePageChange(1)}>
-                            <Text className='font-bold text-xl text-center text-blue-600 '>... {totalPagesControl}</Text>
-                        </TouchableOpacity>
-
-                    ) : <View className='w-5'></View>}
-                </View>
-
-                {pageControl < totalPagesControl ? (
-                    <TouchableOpacity
-                        className="h-10 justify-center"
-                        onPress={() => handlePageChange(pageControl + 1)}>
-                        <Icon name='caretright' size={24} color='#2563eb' />
-                    </TouchableOpacity>
-                ) : <View className='w-5'></View>}
-            </View> */}
-
             <View className="flex-row justify-between mx-auto mt-1 ">
                 <PaginationComponent
                     page={pageControl}
                     totalPages={totalPagesControl}
-                    handlePageChange={handlePageChange}
+                    setPage={setPageControl}
                     limit={limit}
                     setLimit={setLimit}
                 />
             </View>
 
-
+            <Toast config={toastConfig} />
 
         </SafeAreaView>
 
     )
 }
+const toastConfig = {
+    customToast: ({ text1 }) => (
+        <View className="bg-slate-600 p-2 rounded-3xl w-3/5 items-center">
+            <Text className="text-white text-base font-medium">{text1}</Text>
+        </View>
+    ),
+};
 
 export default ControlHistory;

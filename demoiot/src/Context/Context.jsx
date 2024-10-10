@@ -21,8 +21,7 @@ export const Provider = ({ children }) => {
         minValue = 0,
         maxValue = Number.MAX_SAFE_INTEGER,
         selectField = 'temp',
-        startTime = new Date(0),
-        endTime = new Date(),
+        date = null,
         page = 1,
         limit = 10
     }) => {
@@ -38,14 +37,13 @@ export const Provider = ({ children }) => {
                     minValue,
                     maxValue,
                     selectField,
-                    startTime,
-                    endTime,
+                    date,
                     limit
                 }
             });
             setSensorHistory(response.data.data);
-
             setTotalPagesSensor(response.data.totalPages);
+            if (!sensorHistory) setPageSensor(0);
         } catch (error) {
             console.error('Failed to fetch sensor history:', error);
         }
@@ -53,8 +51,7 @@ export const Provider = ({ children }) => {
 
 
     const fetchControlHistory = async ({
-        startTime = new Date(0),
-        endTime = new Date(),
+        date = null,
         page = 1,
         deviceId = null,
         action = null,
@@ -68,8 +65,7 @@ export const Provider = ({ children }) => {
                 params: {
                     page,
                     limit: 10,
-                    startTime,
-                    endTime,
+                    date,
                     deviceId,
                     action,
                     limit
@@ -77,6 +73,7 @@ export const Provider = ({ children }) => {
             });
             setControlHistory(response.data.data);
             setTotalPagesControl(response.data.totalPages);
+            if (!controlHistory) setControlHistory(0);
         } catch (error) {
             console.error('Failed to fetch sensor history:', error);
         }

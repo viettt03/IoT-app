@@ -14,7 +14,10 @@ const sensorSchema = mongoose.Schema({
         type: Number,
         required: true,
     },
-    timestamp: { type: Date, default: Date.now }
+    timestamp: {
+        type: Date,
+        required: true,
+    }
 });
 sensorSchema.plugin(AutoIncrement, { inc_field: 'order' });
 module.exports = mongoose.model('Sensor', sensorSchema)

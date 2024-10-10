@@ -10,6 +10,7 @@ const mqtt = require('mqtt');
 const WebSocket = require('ws');
 const { saveSensorData } = require('./controllers/sensor');
 const { saveControlData } = require('./controllers/control');
+const Sensor = require('./models/Sensor');
 
 const app = express();
 
@@ -102,6 +103,19 @@ function broadcastSensorData(wss, data) {
 app.use((err, req, res, next) => {
     return res.status(500).json({ error: err.message });
 });
+
+
+// Sensor.find({})
+//     .skip((5 - 1) * 10)
+//     .limit(10)
+//     .then(data => {
+//         console.log(data);
+//     })
+//     .catch(err => {
+//         console.error(err);
+//     });
+
+
 
 const PORT = process.env.PORT || 3000;
 
