@@ -1,10 +1,9 @@
-import { View, Text, SafeAreaView, ScrollView, FlatList, StyleSheet, Modal, TouchableOpacity, TextInput } from 'react-native'
+import { View, Text, SafeAreaView, ScrollView, FlatList, StyleSheet, Modal, TouchableOpacity, TextInput, Keyboard } from 'react-native'
 import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { Context } from '../Context/Context';
 import Icon from 'react-native-vector-icons/AntDesign';
 import { Dropdown } from 'react-native-element-dropdown';
 import Icon2 from 'react-native-vector-icons/FontAwesome';
-import renderDateTimePicker from '../components/renderDateTimePicker';
 import PaginationComponent from '../components/PaginationComponent ';
 import Clipboard from '@react-native-clipboard/clipboard';
 import Toast from 'react-native-toast-message';
@@ -94,24 +93,11 @@ const ControlHistory = () => {
             });
             return;
         }
+
         const [day, month, yearAndTime] = inputDate.split('/');
         const [year, time] = yearAndTime.split(' ');
-        if (!year || !time) {
-            Toast.show({
-                type: 'customToast',
-                text1: 'Invalid date format',
-                visibilityTime: 1000,
-            });
-            return;
-        }
-        const formattedDateString = `${year}-${month}-${day}T${time}.319`;
-        const parsedDate = new Date(formattedDateString);
-        if (!isNaN(parsedDate)) {
-            setPageControl(1);
-            setAction(null);
-            setDeviceId(null);
-            setDate(parsedDate);
-        } else {
+
+        if (!year) {
             Toast.show({
                 type: 'customToast',
                 text1: 'Invalid date format',
@@ -120,6 +106,34 @@ const ControlHistory = () => {
             return;
         }
 
+        let formattedDateString = `${year}-${month}-${day}`; // Basic date format
+
+        // Add time if available
+        if (time) {
+            const timeParts = time.split(':');
+            const hours = timeParts[0] || '00';
+            const minutes = timeParts[1] || '00';
+            const seconds = timeParts[2] || '00';
+
+            formattedDateString += `T${hours}:${minutes}:${seconds}.000`;
+        } else {
+            formattedDateString += 'T00:00:00.000';
+        }
+
+        const parsedDate = new Date(formattedDateString);
+
+        if (!isNaN(parsedDate.getTime())) {
+            setDate(parsedDate);
+            setSearch(1);
+            setPageSensor(1);
+        } else {
+            Toast.show({
+                type: 'customToast',
+                text1: 'Invalid date format',
+                visibilityTime: 1000,
+            });
+        }
+        Keyboard.dismiss();
     };
 
     const copyToClipboard = (text) => {
@@ -191,7 +205,7 @@ const ControlHistory = () => {
                 <View className="mt-2 flex">
                     <View className=" flex">
                         <Text className="text-lg font-semibold mb-1 text-gray-700">Search by time:</Text>
-                        <View className='flex-row justify-between gap-10'>
+                        <View className='flex-row justify-between gap-8'>
                             <TextInput
                                 className="border border-gray-300 rounded-lg h-10 px-4 flex-1 text-gray-700"
                                 placeholder="Enter the time"
@@ -199,6 +213,17 @@ const ControlHistory = () => {
                                 value={inputDate}
                                 onChangeText={setInputDate}
                             />
+                            {inputDate.length > 0 && (
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        setInputDate('');
+                                        setDate(null);
+                                    }}
+                                    className="absolute right-20 top-2"
+                                >
+                                    <Icon name="close" size={20} color="gray" />
+                                </TouchableOpacity>
+                            )}
                             <TouchableOpacity
                                 onPress={handleSearch}
                                 className="rounded-lg flex justify-center items-center mr-3">

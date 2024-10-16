@@ -14,6 +14,14 @@ const sensorSchema = mongoose.Schema({
         type: Number,
         required: true,
     },
+    wind: {
+        type: Number,
+        required: true,
+    },
+    rain: {
+        type: Number,
+        required: true,
+    },
     timestamp: {
         type: Date,
         required: true,

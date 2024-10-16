@@ -6,18 +6,6 @@ const { width } = Dimensions.get('window');
 const ProfileScreen = (props) => {
     const [active, setActive] = useState(0);
     const [imagePreview, setImagePreview] = useState(false);
-    const handleLinkPress = async (url) => {
-        try {
-            const supported = await Linking.canOpenURL(url); // Kiểm tra xem có mở được URL không
-            if (supported) {
-                await Linking.openURL(url); // Mở URL nếu khả dụng
-            } else {
-                Alert.alert(`Không thể mở URL: ${url}`);
-            }
-        } catch (error) {
-            Alert.alert('Có lỗi xảy ra:', error.message);
-        }
-    };
 
     return (
         <ScrollView showsVerticalScrollIndicator={false}>
@@ -86,7 +74,7 @@ const ProfileScreen = (props) => {
 
                                 <TouchableOpacity
                                     style={{ padding: 10, borderRadius: 5, backgroundColor: '#eee', width: '80%', alignItems: 'center', marginTop: 10 }}
-                                    onPress={() => Linking.openURL('https://drive.google.com/file/d/186XMKkkWNIXOuy16SY0mkOqNOM6pwJ7c/view')}
+                                    onPress={() => Linking.openURL('https://drive.google.com/file/d/1I2FAOJAfhGa0IRDgAQkpEOYJGEY6Mxyd/view?usp=sharing')}
                                 >
                                     <Text style={{ color: 'blue', fontSize: 18 }}>API docs</Text>
                                 </TouchableOpacity>

@@ -10,7 +10,6 @@ const mqtt = require('mqtt');
 const WebSocket = require('ws');
 const { saveSensorData } = require('./controllers/sensor');
 const { saveControlData } = require('./controllers/control');
-const Sensor = require('./models/Sensor');
 
 const app = express();
 
@@ -27,7 +26,7 @@ const mqttOptions = {
     password: '2003',
 };
 
-const mqttClient = mqtt.connect('mqtt://192.168.0.102:1234', mqttOptions);
+const mqttClient = mqtt.connect('mqtt://192.168.193.89:1234', mqttOptions);
 
 mqttClient.on('connect', () => {
     console.log('Connected to MQTT broker');
@@ -58,9 +57,8 @@ app.post('/api/postDataControl', async (req, res) => {
     }
 })
 
-mqttClient.on('message', (topic, message) => {
+mqttClient.on('message', async (topic, message) => {
     const msg = message.toString();
-    console.log(msg);
 
     if (topic === 'home/sensor') {
         const data = msg.split(" ")
@@ -99,22 +97,9 @@ function broadcastSensorData(wss, data) {
     });
 }
 
-
 app.use((err, req, res, next) => {
     return res.status(500).json({ error: err.message });
 });
-
-
-// Sensor.find({})
-//     .skip((5 - 1) * 10)
-//     .limit(10)
-//     .then(data => {
-//         console.log(data);
-//     })
-//     .catch(err => {
-//         console.error(err);
-//     });
-
 
 
 const PORT = process.env.PORT || 3000;

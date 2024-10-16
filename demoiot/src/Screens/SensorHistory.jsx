@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useContext, useCallback, useMemo } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, Button, Image, TextInput, SafeAreaView, ScrollView, Alert } from 'react-native';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, Button, Image, TextInput, SafeAreaView, ScrollView, Alert, Keyboard } from 'react-native';
 import _ from "lodash"
 import { Context } from '../Context/Context';
 import Icon from 'react-native-vector-icons/AntDesign';
@@ -15,7 +15,7 @@ function formatDate(string) {
 
     const date = new Date(string)
     let day = String(date.getDate()).padStart(2, '0');
-    let month = String(date.getMonth() + 1).padStart(2, '0'); // Tháng trong JavaScript tính từ 0
+    let month = String(date.getMonth() + 1).padStart(2, '0');
     let year = date.getFullYear();
     let hours = String(date.getHours()).padStart(2, '0');
     let minutes = String(date.getMinutes()).padStart(2, '0');
@@ -25,7 +25,7 @@ function formatDate(string) {
 
 export default function SensorHistory() {
 
-    const [columns, setColumns] = useState(["Id", "Temp", "Humidity", "Light", "Time"])
+    const [columns, setColumns] = useState(["Id", "Temp", "Hum", "Light", "Wind", "Rain", "Time"])
     const [direction, setDirection] = useState('desc')
     const [selectedColumn, setSelectedColumn] = useState('id')
     const [selectedField, setSelectedField] = useState(null);
@@ -34,10 +34,8 @@ export default function SensorHistory() {
     const [date, setDate] = useState(null);
     const [inputDate, setInputDate] = useState('');
     const [search, setSearch] = useState(0)
-
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [limit, setLimit] = useState(10)
-
 
     const { sensorHistory, pageSensor, totalPagesSensor, fetchSensorHistory, setPageSensor } = useContext(Context);
 
@@ -45,7 +43,7 @@ export default function SensorHistory() {
         let orderBy = selectedColumn;
         if (orderBy === 'id') orderBy = 'order'
         const params = {
-            sortBy: orderBy,
+            sortBy: orderBy === 'hum' ? 'humidity' : orderBy,
             order: direction,
             page: pageSensor,
             selectField: selectedField,
@@ -60,7 +58,7 @@ export default function SensorHistory() {
 
     const onRefresh = () => {
         setIsRefreshing(true);
-        // Refetch data here
+
         let orderBy = selectedColumn;
         if (orderBy === 'id') orderBy = 'order';
         const params = {
@@ -78,8 +76,8 @@ export default function SensorHistory() {
 
     const handleFieldChange = (value) => {
         setSelectedField(value);
-        setMinValue('');
-        setMaxValue('');
+        setMinValue(0);
+        setMaxValue(Number.MAX_SAFE_INTEGER);
     };
 
     const handleSearch = () => {
@@ -92,9 +90,11 @@ export default function SensorHistory() {
                 });
                 return;
             }
+
             const [day, month, yearAndTime] = inputDate.split('/');
             const [year, time] = yearAndTime.split(' ');
-            if (!year || !time) {
+
+            if (!year) {
                 Toast.show({
                     type: 'customToast',
                     text1: 'Invalid date format',
@@ -102,9 +102,24 @@ export default function SensorHistory() {
                 });
                 return;
             }
-            const formattedDateString = `${year}-${month}-${day}T${time}.000`;
+
+            let formattedDateString = `${year}-${month}-${day}`; // Basic date format
+
+            // Add time if available
+            if (time) {
+                const timeParts = time.split(':');
+                const hours = timeParts[0] || '00';
+                const minutes = timeParts[1] || '00';
+                const seconds = timeParts[2] || '00';
+
+                formattedDateString += `T${hours}:${minutes}:${seconds}.000`;
+            } else {
+                formattedDateString += 'T00:00:00.000';
+            }
+
             const parsedDate = new Date(formattedDateString);
-            if (!isNaN(parsedDate)) {
+
+            if (!isNaN(parsedDate.getTime())) {
                 setDate(parsedDate);
                 setSearch(1);
                 setPageSensor(1);
@@ -114,10 +129,10 @@ export default function SensorHistory() {
                     text1: 'Invalid date format',
                     visibilityTime: 1000,
                 });
-                return;
             }
-        } else {
-            console.log(minValue, maxValue);
+        }
+        else {
+
 
             if (!minValue || !maxValue) {
                 Toast.show({
@@ -143,6 +158,7 @@ export default function SensorHistory() {
             setDirection('desc');
 
         }
+        Keyboard.dismiss();
     };
 
 
@@ -161,8 +177,8 @@ export default function SensorHistory() {
         setSelectedField(null);
         setSelectedColumn('id')
         setMinValue(0);
-        setInputDate('')
         setMaxValue(Number.MAX_SAFE_INTEGER);
+        setInputDate('')
         setDate(null);
         setSearch(0)
         setDirection('desc');
@@ -183,10 +199,11 @@ export default function SensorHistory() {
                 <TouchableOpacity
                     key={index}
                     style={styles.columnHeader}
+                    className={column == "Time" ? "w-[20%]" : "w-[13%]"}
                     onPress={() => handleSort(column)}
                 >
                     <Text style={styles.columnHeaderTxt}>{column}
-                        {selectedColumn === column.toLowerCase() && selectedColumn !== 'time' && (
+                        {(selectedColumn === column.toLowerCase()) && selectedColumn !== 'time' && (
                             <View>
                                 {direction === 'desc' ? <Icon name='caretdown' size={10} /> : <Icon name='caretup' size={10} />}
                             </View>
@@ -196,6 +213,8 @@ export default function SensorHistory() {
             ))}
         </View>
     ), [columns, selectedColumn, direction]);
+
+
 
     return (
         <SafeAreaView className="flex-1 bg-white">
@@ -221,6 +240,8 @@ export default function SensorHistory() {
                             <Picker.Item label="Temperature" value="temp" />
                             <Picker.Item label="Humidity" value="humidity" />
                             <Picker.Item label="Light" value="light" />
+                            <Picker.Item label="Wind" value="wind" />
+                            <Picker.Item label="Rain" value="rain" />
                             <Picker.Item label="Time" value="time" />
                         </Picker>
                     </View>
@@ -257,7 +278,7 @@ export default function SensorHistory() {
                 {selectedField === 'time' && (
                     <View className=" flex">
                         <Text className="text-lg font-semibold mb-3 text-gray-700">Search by time</Text>
-                        <View className='flex-row justify-between gap-10'>
+                        <View className='flex-row justify-between gap-6'>
                             <TextInput
                                 className="border border-gray-300 rounded-lg h-10 px-4 flex-1 text-gray-700"
                                 placeholder="Enter the time"
@@ -265,6 +286,17 @@ export default function SensorHistory() {
                                 value={inputDate}
                                 onChangeText={setInputDate}
                             />
+                            {inputDate.length > 0 && (
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        setInputDate('');
+                                        setDate(null);
+                                    }}
+                                    className="absolute right-20 top-2"
+                                >
+                                    <Icon name="close" size={20} color="gray" />
+                                </TouchableOpacity>
+                            )}
                             <TouchableOpacity
                                 onPress={handleSearch}
                                 className="rounded-lg flex justify-center items-center mr-3">
@@ -290,21 +322,31 @@ export default function SensorHistory() {
                         return (
                             <View className={`flex-row h-16 items-center ${index % 2 === 1 ? 'bg-blue-50' : 'bg-white'}`}>
 
-                                <Text className="w-[20%] text-center font-bold text-base" selectable>{item.order}</Text>
+                                <Text className="w-[13%] text-center font-bold text-base" selectable>{item.order}</Text>
                                 <TouchableOpacity
-                                    className="w-[20%] text-center text-sm"
+                                    className="w-[13%] text-center text-sm"
                                     onLongPress={() => copyToClipboard(String(item.temp))}>
                                     <Text className='text-center'>{item.temp}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
-                                    className="w-[20%] text-center text-sm"
+                                    className="w-[13%] text-center text-sm"
                                     onLongPress={() => copyToClipboard(String(item.humidity))}>
                                     <Text className='text-center'>{item.humidity}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
-                                    className="w-[20%] text-center text-sm"
+                                    className="w-[14%] text-center text-sm"
                                     onLongPress={() => copyToClipboard(String(item.light))}>
                                     <Text className='text-center'>{item.light}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    className="w-[13%] text-center text-sm"
+                                    onLongPress={() => copyToClipboard(String(item.wind || 0))}>
+                                    <Text className='text-center'>{item.wind || 0}</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    className="w-[13%] text-center text-sm"
+                                    onLongPress={() => copyToClipboard(String(item.rain || 0))}>
+                                    <Text className='text-center'>{item.rain || 0}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     className="w-[20%] text-center text-sm"
@@ -314,20 +356,22 @@ export default function SensorHistory() {
                             </View>
                         );
                     }}
+                    ListFooterComponent={() => (
+                        <View className="flex-row justify-between my-1 items-center mx-auto">
+                            <PaginationComponent
+                                page={pageSensor}
+                                totalPages={totalPagesSensor}
+                                setPage={setPageSensor}
+                                limit={limit}
+                                setLimit={setLimit}
+                            />
+                        </View>
+                    )}
                 />
 
-                {/* Pagination Controls */}
 
             </View>
-            <View className="flex-row justify-between my-1 items-center mx-auto">
-                <PaginationComponent
-                    page={pageSensor}
-                    totalPages={totalPagesSensor}
-                    setPage={setPageSensor}
-                    limit={limit}
-                    setLimit={setLimit}
-                />
-            </View>
+
             <Toast config={toastConfig} />
         </SafeAreaView>
     );
@@ -363,7 +407,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     columnHeader: {
-        width: "20%",
+
         justifyContent: "center",
         alignItems: "center"
     },

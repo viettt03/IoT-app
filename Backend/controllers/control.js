@@ -43,7 +43,40 @@ exports.getDatatControl = async (req, res) => {
         query.deviceId = deviceId
 
     }
-    if (date) query.timestamp = new Date(date);
+    if (date) {
+        const inputDate = new Date(date);
+        if (isNaN(inputDate.getTime())) {
+            return res.status(400).json({ error: 'Ngày không hợp lệ' });
+        }
+
+        const startDate = new Date(inputDate);
+        let endDate;
+
+        if (inputDate.getSeconds() === 0) {
+            if (inputDate.getMinutes() === 0) {
+                if (inputDate.getHours() === 0) {
+
+                    endDate = new Date(startDate);
+                    endDate.setDate(startDate.getDate() + 1);
+                } else {
+
+                    endDate = new Date(startDate);
+                    endDate.setHours(startDate.getHours() + 1);
+                }
+            } else {
+
+                endDate = new Date(startDate);
+                endDate.setMinutes(startDate.getMinutes() + 1);
+            }
+        } else {
+
+            endDate = new Date(startDate);
+            endDate.setSeconds(startDate.getSeconds() + 1);
+        }
+
+        query.timestamp = { $gte: startDate, $lt: endDate };
+    }
+
     try {
         const data = await Control.find(query)
             .sort({ timestamp: -1 })
@@ -60,55 +93,5 @@ exports.getDatatControl = async (req, res) => {
     } catch (err) {
         console.error('Errorfecth data:', err);
         res.status(500).json({ error: 'Failed to  data' });
-    }
-};
-
-exports.filterAction = async (req, res) => {
-    const { action, page = 1, limit = 10 } = req.query;
-
-    try {
-        const skip = (page - 1) * limit;
-
-        const results = await Control.find({ action: action })
-            .skip(skip)
-            .limit(Number(limit));
-
-        const totalResults = await Control.countDocuments({ action: action });
-
-        res.json({
-            page: Number(page),
-            limit: Number(limit),
-            totalResults,
-            totalPages: Math.ceil(totalResults / limit),
-            data: results,
-        });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-};
-
-exports.filterDevice = async (req, res) => {
-    const { device, page = 1, limit = 10 } = req.query;
-
-    try {
-        const skip = (page - 1) * limit;
-
-        const results = await Control.find({ device: device })
-            .sort({ timestamp: -1 })
-            .skip(skip)
-            .limit(Number(limit));
-
-
-        const totalResults = await Control.countDocuments({ device: device });
-
-        res.json({
-            page: Number(page),
-            limit: Number(limit),
-            totalResults,
-            totalPages: Math.ceil(totalResults / limit),
-            data: results,
-        });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
     }
 };

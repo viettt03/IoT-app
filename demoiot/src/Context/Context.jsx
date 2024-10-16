@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 export const Context = createContext();
 
@@ -9,10 +9,7 @@ export const Provider = ({ children }) => {
     const [controlHistory, setControlHistory] = useState([]);
     const [pageControl, setPageControl] = useState(1);
     const [totalPagesControl, setTotalPagesControl] = useState(1);
-    const [currentData, setCurrentData] = useState({ temp: 0, humidity: 0, light: 0 });
-    const [temps, setTemps] = useState([{ value: 0, dataPointText: '0' }])
-    const [hums, setHums] = useState([{ value: 0, dataPointText: '0' }])
-    const [lights, setLights] = useState([{ value: 0, dataPointText: '0' }])
+    const [warningToday, setWarningToday] = useState(0);
 
 
     const fetchSensorHistory = async ({
@@ -25,7 +22,7 @@ export const Provider = ({ children }) => {
         page = 1,
         limit = 10
     }) => {
-        const url = 'http://192.168.0.102:8080/api/getDataSensor';
+        const url = 'http://192.168.193.89:8080/api/getDataSensor';
         try {
 
             const response = await axios.get(url, {
@@ -43,7 +40,7 @@ export const Provider = ({ children }) => {
             });
             setSensorHistory(response.data.data);
             setTotalPagesSensor(response.data.totalPages);
-            if (!sensorHistory) setPageSensor(0);
+            if (!response.data.data) setPageSensor(0);
         } catch (error) {
             console.error('Failed to fetch sensor history:', error);
         }
@@ -59,7 +56,7 @@ export const Provider = ({ children }) => {
 
     }) => {
 
-        const url = 'http://192.168.0.102:8080/api/getDataControl';
+        const url = 'http://192.168.193.89:8080/api/getDataControl';
         try {
             const response = await axios.get(url, {
                 params: {
@@ -79,77 +76,41 @@ export const Provider = ({ children }) => {
         }
     };
 
+    const fetchWarningToday = async () => {
 
-    // useEffect(() => {
-    //     const ws = new WebSocket('ws://192.168.0.102:8080');
+        const url = 'http://192.168.193.89:8080/api/getWarningToday';
+        try {
+            const response = await axios.get(url);
+            setWarningToday(response.data.countWaring);
 
-    //     ws.onopen = () => {
-    //         console.log('Connected to WebSocket server');
-    //     };
+        } catch (error) {
+            console.error('Failed to fetch sensor history:', error);
+        }
+    };
 
-    //     ws.onmessage = (event) => {
-    //         const res = JSON.parse(event.data);
-    //         if (res.type === 'sensorData') {
-    //             const data = res.data
-    //             setCurrentData({
-    //                 temp: Number(data[0]),
-    //                 humidity: Number(data[1]),
-    //                 light: Number(data[2])
-    //             });
+    const value = useMemo(() => ({
+        sensorHistory,
+        fetchSensorHistory,
+        pageSensor,
+        setPageSensor,
+        totalPagesSensor,
+        setSensorHistory,
+        fetchControlHistory,
+        setPageControl,
+        totalPagesControl,
+        pageControl,
+        controlHistory,
+        setControlHistory,
+        setTotalPagesControl,
+        warningToday,
+        fetchWarningToday
+    }), [
+        sensorHistory, totalPagesSensor, controlHistory, totalPagesControl, pageSensor, pageControl, warningToday
+    ]);
 
-    //             setTemps(prevTemps => {
-    //                 const updatedTemps = [...prevTemps, { value: Number(data[0]), dataPointText: data[0] }];
-    //                 if (updatedTemps.length > 10) updatedTemps.shift();
-    //                 return updatedTemps;
-    //             });
-
-    //             setHums(prevHums => {
-    //                 const updatedHums = [...prevHums, { value: Number(data[1]), dataPointText: data[1] }];
-    //                 if (updatedHums.length > 10) updatedHums.shift();
-    //                 return updatedHums;
-    //             });
-
-    //             setLights(prevLights => {
-    //                 const updatedLights = [...prevLights, { value: Number(data[2]), dataPointText: data[2] }];
-    //                 if (updatedLights.length > 10) updatedLights.shift();
-    //                 return updatedLights;
-    //             });
-    //         }
-    //     };
-
-    //     ws.onclose = () => {
-    //         console.log('WebSocket connection closed');
-    //     };
-
-    //     ws.onerror = (error) => {
-    //         console.error('WebSocket error: ', error);
-    //     };
-
-    //     return () => {
-    //         ws.close();
-    //     };
-    // }, []);
 
     return (
-        <Context.Provider value={{
-            // currentData,
-            // temps, hums, lights,
-            sensorHistory,
-            fetchSensorHistory,
-            pageSensor,
-            setPageSensor,
-            totalPagesSensor,
-            setSensorHistory,
-            fetchControlHistory,
-            setPageControl,
-            totalPagesControl,
-            pageControl,
-            controlHistory,
-            setControlHistory,
-            setTotalPagesControl,
-
-
-        }}>
+        <Context.Provider value={value}>
             {children}
         </Context.Provider>
     );

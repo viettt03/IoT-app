@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     scoreBar: {
         position: 'absolute',
         top: 0,
-        left: 0,
+        left: -6,
         right: 0,
         bottom: 0,
     },
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     scoreValue: {
         position: 'absolute',
         top: '80%',
-        left: '70%',
+        left: '75%',
         transform: [{ translateX: -50 }, { translateY: -10 }], // Center the text horizontally and slightly adjust vertically
         textAlign: 'center',
     },

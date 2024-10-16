@@ -2,22 +2,22 @@
 #include <PubSubClient.h>
 #include <DHT.h>
 
-#define DHTPIN 4        // Pin nối với cảm biến DHT
-#define DHTTYPE DHT11   // Chọn loại cảm biến (DHT11 hoặc DHT22)
+#define DHTPIN 4       // Pin nối với cảm biến DHT
+#define DHTTYPE DHT11  // Chọn loại cảm biến (DHT11 hoặc DHT22)
 #define LDR 34
 // Định nghĩa các chân LED
-const int led1 = 18;    // GPIO 21 cho LED1
+const int led1 = 18;  // GPIO 21 cho LED1
 const int led2 = 19;
 const int led3 = 21;
+const int led4 = 22;
 
-// Định nghĩa chân cảm biến ánh sáng (DO)
 
 // Định nghĩa WiFi và MQTT Broker
-const char* ssid = "Wifi-Free";
-const char* password = "Wifi-Free";
-const char* mqtt_server = "192.168.0.102";  // IP broker
-const char* mqtt_user = "viettt03";  // Username của MQTT
-const char* mqtt_pass = "2003";  // Password của MQTT
+const char* ssid = "aaaa";
+const char* password = "12345678910";
+const char* mqtt_server = "192.168.193.89";  // IP broker
+const char* mqtt_user = "viettt03";         // Username của MQTT
+const char* mqtt_pass = "2003";             // Password của MQTT
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -48,9 +48,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
     message += (char)payload[i];
   }
 
-  if (message.startsWith("all")) {
+  if (message == "blink") {
+    digitalWrite(led4, HIGH);
+    delay(1000);
+    digitalWrite(led4, LOW);
+  } else if (message.startsWith("all")) {
     int state = message.substring(4, 5).toInt();
-    
+
     // Bật/tắt tất cả các đèn
     digitalWrite(led1, state);
     digitalWrite(led2, state);
@@ -58,13 +62,18 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
     String ledStatus = "all:" + String(state);
     client.publish("home/device/status", ledStatus.c_str());
-    Serial.println(ledStatus);  // In ra thông báo trạng thái
-    
+    Serial.println(ledStatus);
+
   } else {
     int led = message.substring(0, 1).toInt();
     int state = message.substring(2, 3).toInt();
 
-    // Điều khiển đèn đơn lẻ
+    // Pub lại thông báo khi đèn bật thành công
+    String ledStatus = String(led) + ":" + String(state);
+    client.publish("home/device/status", ledStatus.c_str());
+    Serial.println(ledStatus);
+
+
     if (led == 1) {
       digitalWrite(led1, state);
     } else if (led == 2) {
@@ -72,11 +81,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
     } else if (led == 3) {
       digitalWrite(led3, state);
     }
-
-    // Pub lại thông báo khi đèn bật thành công
-    String ledStatus = String(led) + ":" + String(state);
-    client.publish("home/device/status", ledStatus.c_str());
-    Serial.println(ledStatus);  // In ra thông báo trạng thái
   }
 }
 
@@ -107,6 +111,7 @@ void setup() {
   pinMode(led1, OUTPUT);
   pinMode(led2, OUTPUT);
   pinMode(led3, OUTPUT);
+  pinMode(led4, OUTPUT);
   pinMode(LDR, INPUT);  // Cảm biến ánh sáng (DO) là đầu vào
 
   // Khởi tạo cảm biến DHT
@@ -123,20 +128,28 @@ void loop() {
   // Đọc giá trị từ cảm biến DHT
   float temperature = dht.readTemperature();
   float humidity = dht.readHumidity();
-
+  int wind= random(0,101);
+  int rain= random(0,101);
   // Đọc giá trị từ cảm biến ánh sáng (0 hoặc 1)
   int lightSensorValue = analogRead(LDR);
   // Kiểm tra nếu dữ liệu cảm biến hợp lệ
   if (!isnan(temperature) && !isnan(humidity)) {
     // Tạo chuỗi dữ liệu để gửi qua MQTT
-    String payload1 =String(temperature) + " " + String(humidity) + " " + String(lightSensorValue);
-    String payload ="Temp: "+ String(temperature) + " Humidity: " + String(humidity) + " Light: " + String(lightSensorValue);
-    
+    String payload1 = String(temperature) + " " + String(humidity) + " " + String(lightSensorValue) +" " + String(wind)+" "+String(rain);
+    String payload = "Temp: " + String(temperature) + " Humidity: " + String(humidity) + " Light: " + String(lightSensorValue)+ " Wind: "+ String(wind)+" Rain: "+ String(rain);
+
     // Gửi dữ liệu tới MQTT topic
     client.publish("home/sensor", payload1.c_str());
+    if (wind > 50 && rain>50) {
+      digitalWrite(led4, HIGH);  // Nháy đèn cảnh báo
+      delay(500);
+      digitalWrite(led4, LOW);
+    }
+
+
 
     Serial.println(payload);
   }
 
-  delay(5000);  // Đọc dữ liệu mỗi 2 giây
+  delay(3000);  // Đọc dữ liệu mỗi 2 giây
 }
